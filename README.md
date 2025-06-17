@@ -9,8 +9,8 @@ OrderService - создает заказ и запускает асинхрон�
 PaymentsService - создает платежный счет пользовтаеля; пополяет счет по aйди пользователя, возвращает количетсво денег на счету по айди пользователя.  
 
 Реализованы следуюшие паттерны:
-transactionalOutbox
-transactionalInbox
+transactionalOutbox,
+transactionalInbox,
 семантика exactly once с помощью TransactionalOutboxService, PaymentService, StatusUpdateService.
 
 
