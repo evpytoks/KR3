@@ -11,6 +11,6 @@ PaymentsService - создает платежный счет пользовта�
 Реализованы следуюшие паттерны:
 transactionalOutbox
 transactionalInbox
-семантика exactly once
+семантика exactly once с помощью TransactionalOutboxService, PaymentService, StatusUpdateService.
 
 
