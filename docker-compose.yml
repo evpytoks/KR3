@@ -1,0 +1,108 @@
+﻿version: '3.8'
+
+services:
+  api_gateway:
+    build:
+      context: .
+      dockerfile: API_Gateway/Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+    depends_on:
+      order_service:
+        condition: service_started
+      payments_service:
+        condition: service_started
+    networks:
+      - shop-network
+  order_service:
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    ports:
+      - "8081:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__OrdersDb=Server=sqlserver;Database=OrdersDb;User ID=sa;Password=SqlPassw0rd!;TrustServerCertificate=True
+      - MessageBus__Host=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      sqlserver:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  payments_service:
+    build:
+      context: .
+      dockerfile: PaymentsService/Dockerfile
+    ports:
+      - "8082:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__PaymentsDb=Server=sqlserver;Database=PaymentsDb;User ID=sa;Password=SqlPassw0rd!;TrustServerCertificate=True
+      - MessageBus__Host=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      sqlserver:
+        condition: service_started
+    restart: on-failure
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  sqlserver:
+    build:
+      context: .
+      dockerfile: sqlserver.Dockerfile
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=SqlPassw0rd!
+      - MSSQL_PID=Express
+      - MSSQL_TCP_PORT=1433
+    ports:
+      - "1433:1433"
+    command: /opt/mssql/bin/sqlservr
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - shop-network
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - shop-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+volumes:
+  sqlserver-data:
+  rabbitmq-data:
+networks:
+  shop-network:
+    driver: bridge
